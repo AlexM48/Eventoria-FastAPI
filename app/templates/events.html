@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Your Events — Eventoria{% endblock %}
+
+{% block content %}
+
+<div class="events-container">
+
+    <div class="events-header">
+        <h1>Your Events</h1>
+        <button class="btn-primary" id="openModalBtn">
+            + Create Event
+        </button>
+    </div>
+
+    <div id="events-list" class="events-list">
+        Loading events...
+    </div>
+
+    <div id="pagination" class="pagination"></div>
+</div>
+
+<!-- Modal -->
+<div id="event-modal" class="modal">
+    <div class="modal-content">
+        <h2>Create Event</h2>
+
+        <input type="text" id="event-title" placeholder="Title" required>
+        <textarea id="event-description" placeholder="Description" required></textarea>
+
+        <button id="createEventBtn" class="btn-primary">
+            Create
+        </button>
+
+        <button id="closeModalBtn" class="btn-secondary">
+            Cancel
+        </button>
+    </div>
+</div>
+
+<script>
+
+let currentPage = 1
+let pageSize = 5
+let totalPages = 1
+
+let editingEventId = null
+
+
+// =============================
+// Utilities
+// =============================
+
+function getToken() {
+    return localStorage.getItem("access_token")
+}
+
+function openModal() {
+    document.getElementById("event-modal").style.display = "flex"
+}
+
+function closeModal() {
+
+    document.getElementById("event-modal").style.display = "none"
+
+    editingEventId = null
+
+    document.querySelector("#event-modal h2").textContent = "Create Event"
+
+    document.getElementById("createEventBtn").textContent = "Create"
+
+    document.getElementById("event-title").value = ""
+    document.getElementById("event-description").value = ""
+}
+
+
+// =============================
+// Open Edit Modal
+// =============================
+
+function openEditModal(event) {
+
+    editingEventId = event.id
+
+    document.getElementById("event-title").value = event.title
+    document.getElementById("event-description").value = event.description
+
+    document.querySelector("#event-modal h2").textContent = "Edit Event"
+
+    document.getElementById("createEventBtn").textContent = "Save"
+
+    openModal()
+}
+
+
+// =============================
+// Pagination renderer
+// =============================
+
+function renderPagination() {
+
+    const container = document.getElementById("pagination")
+
+    if (totalPages <= 1) {
+        container.innerHTML = ""
+        return
+    }
+
+    container.innerHTML = ""
+
+    const left = document.createElement("div")
+    left.className = "pagination-left"
+
+    const prevBtn = document.createElement("button")
+    prevBtn.textContent = "← Prev"
+    prevBtn.className = "btn-secondary"
+
+    prevBtn.disabled = currentPage === 1
+
+    prevBtn.onclick = () => {
+        currentPage--
+        loadEvents()
+    }
+
+    left.appendChild(prevBtn)
+
+
+    const center = document.createElement("div")
+    center.className = "pagination-center"
+
+    const info = document.createElement("span")
+    info.textContent = `page ${currentPage} of ${totalPages}`
+
+    center.appendChild(info)
+
+
+    const right = document.createElement("div")
+    right.className = "pagination-right"
+
+    const nextBtn = document.createElement("button")
+    nextBtn.textContent = "Next →"
+    nextBtn.className = "btn-secondary"
+
+    nextBtn.disabled = currentPage === totalPages
+
+    nextBtn.onclick = () => {
+        currentPage++
+        loadEvents()
+    }
+
+    right.appendChild(nextBtn)
+
+
+    container.appendChild(left)
+    container.appendChild(center)
+    container.appendChild(right)
+}
+
+
+// =============================
+// Load Events
+// =============================
+
+async function loadEvents() {
+
+    const token = getToken()
+
+    if (!token) {
+        window.location.href = "/ui/login"
+        return
+    }
+
+    try {
+
+        const response = await fetch(
+            `/events/my?page=${currentPage}&size=${pageSize}`,
+            {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            }
+        )
+
+        if (!response.ok)
+            throw new Error("Failed to load events")
+
+        const data = await response.json()
+
+        totalPages = Math.ceil(data.total / pageSize)
+
+        const container = document.getElementById("events-list")
+
+        container.innerHTML = ""
+
+        if (data.items.length === 0) {
+
+            container.innerHTML = "<p>No events yet</p>"
+
+            renderPagination()
+
+            return
+        }
+
+        data.items.forEach(event => {
+
+            const div = document.createElement("div")
+            div.className = "event-card"
+
+            const h3 = document.createElement("h3")
+            h3.textContent = event.title
+
+            const p = document.createElement("p")
+            p.textContent = event.description
+
+            const actions = document.createElement("div")
+            actions.className = "event-actions"
+
+
+            // EDIT BUTTON
+
+            const editBtn = document.createElement("button")
+            editBtn.textContent = "Edit"
+            editBtn.className = "btn-secondary"
+
+            editBtn.onclick = () => openEditModal(event)
+
+
+            // DELETE BUTTON
+
+            const deleteBtn = document.createElement("button")
+            deleteBtn.textContent = "Delete"
+            deleteBtn.className = "btn-danger"
+
+            deleteBtn.onclick = () => deleteEvent(event.id)
+
+
+            actions.appendChild(editBtn)
+            actions.appendChild(deleteBtn)
+
+
+            div.appendChild(h3)
+            div.appendChild(p)
+            div.appendChild(actions)
+
+            container.appendChild(div)
+        })
+
+        renderPagination()
+
+    } catch (error) {
+
+        console.error(error)
+
+        document.getElementById("events-list").innerHTML =
+            "<p>Error loading events</p>"
+    }
+}
+
+
+// =============================
+// Create OR Update Event
+// =============================
+
+async function createEvent() {
+
+    const title = document.getElementById("event-title").value.trim()
+    const description = document.getElementById("event-description").value.trim()
+    const token = getToken()
+
+    if (!title || !description) {
+
+        alert("Fill all fields")
+
+        return
+    }
+
+    try {
+
+        let url = "/events"
+        let method = "POST"
+
+        if (editingEventId !== null) {
+
+            url = `/events/${editingEventId}`
+            method = "PATCH"
+        }
+
+        const response = await fetch(url, {
+
+            method: method,
+
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+
+            body: JSON.stringify({
+                title,
+                description
+            })
+        })
+
+        if (!response.ok)
+            throw new Error("Save failed")
+
+        closeModal()
+
+        loadEvents()
+
+    } catch (error) {
+
+        console.error(error)
+
+        alert("Error saving event")
+    }
+}
+
+
+// =============================
+// Delete Event
+// =============================
+
+async function deleteEvent(eventId) {
+
+    const token = getToken()
+
+    if (!confirm("Delete this event?"))
+        return
+
+    try {
+
+        const response = await fetch(`/events/${eventId}`, {
+
+            method: "DELETE",
+
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        if (!response.ok)
+            throw new Error("Delete failed")
+
+        loadEvents()
+
+    } catch (error) {
+
+        console.error(error)
+
+        alert("Error deleting event")
+    }
+}
+
+
+// =============================
+// Init
+// =============================
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    loadEvents()
+
+    document.getElementById("openModalBtn").onclick = openModal
+
+    document.getElementById("closeModalBtn").onclick = closeModal
+
+    document.getElementById("createEventBtn").onclick = createEvent
+
+    document.getElementById("event-modal").onclick = (e) => {
+
+        if (e.target.id === "event-modal")
+            closeModal()
+    }
+})
+
+</script>
+
+{% endblock %}

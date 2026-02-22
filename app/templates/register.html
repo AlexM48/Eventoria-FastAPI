@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Register — Eventoria{% endblock %}
+
+{% block content %}
+
+<div class="auth-container">
+
+    <div class="auth-card">
+
+        <h2>Create Account</h2>
+
+        <form id="registerForm">
+
+            <input type="email" name="email" placeholder="Email" required>
+
+            <div class="password-wrapper">
+                <input type="password" name="password" id="password" placeholder="Password" required>
+
+                <span class="toggle-password" id="togglePassword">
+                    👁
+                </span>
+            </div>
+
+            <button type="submit">
+                Register
+            </button>
+
+        </form>
+
+        <div id="message"></div>
+
+    </div>
+
+</div>
+
+<script>
+
+const form = document.getElementById("registerForm")
+
+form.addEventListener("submit", async (e) => {
+
+    e.preventDefault()
+
+    const formData = new FormData(form)
+
+    const data = {
+        email: formData.get("email"),
+        password: formData.get("password")
+    }
+
+    try {
+        const response = await fetch("/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        })
+
+        const messageDiv = document.getElementById("message")
+
+        if (response.ok) {
+            messageDiv.innerHTML =
+                "<div class='success'>Account created successfully. You can login now.</div>"
+            form.reset()
+        } else {
+            const error = await response.json()
+            messageDiv.innerHTML =
+                "<div class='error'>" + (error.detail || "Registration failed") + "</div>"
+        }
+
+    } catch (error) {
+        document.getElementById("message").innerHTML =
+            "<div class='error'>Server error</div>"
+    }
+
+})
+
+document.getElementById("togglePassword")
+    .addEventListener("click", function() {
+
+        const input = document.getElementById("password")
+
+        if (input.type === "password") {
+            input.type = "text"
+            this.textContent = "🙈"
+        } else {
+            input.type = "password"
+            this.textContent = "👁"
+        }
+
+})
+
+</script>
+
+{% endblock %}

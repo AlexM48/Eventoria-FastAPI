@@ -1,0 +1,23 @@
+version: "3.9"  # Версия синтаксиса docker compose
+
+services:  # Список контейнеров
+
+  postgres:  # Имя сервиса (будет hostname внутри docker сети)
+    image: postgres:16  # Готовый официальный postgres образ
+    container_name: evetoria_postgres  # Имя контейнера
+
+    restart: always  # Авто перезапуск если контейнер упал
+
+    environment:  # Настройки postgres
+      POSTGRES_USER: eventoria
+      POSTGRES_PASSWORD: eventoria_pass
+      POSTGRES_DB: eventoria_db
+
+    ports:
+      - "5432:5432"  # Проброс порта на mac localhost
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Сохраняем данные БД
+
+volumes:
+  postgres_data:  # для хранения данных postgres

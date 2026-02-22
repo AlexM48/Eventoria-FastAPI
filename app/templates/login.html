@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Login — Eventoria{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+    <h2>Login</h2>
+
+    <form id="loginForm">
+
+        <input type="email" id="email" placeholder="Email" required>
+
+        <input type="password" id="password" placeholder="Password" required>
+
+        <button type="submit">
+            Login
+        </button>
+
+    </form>
+
+    <p id="error" style="color:red; margin-top:10px;"></p>
+
+</div>
+
+<script>
+
+async function login() {
+
+    const email = document.getElementById("email").value.trim()
+    const password = document.getElementById("password").value.trim()
+
+    try {
+        const response = await fetch("/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Login failed")
+        }
+
+        localStorage.setItem("access_token", data.access_token)
+        window.location.href = "/ui/events"
+
+    } catch (error) {
+        document.getElementById("error").textContent = error.message
+    }
+}
+
+document.getElementById("loginForm")
+    .addEventListener("submit", async (e) => {
+        e.preventDefault()
+        await login()
+    })
+
+</script>
+
+{% endblock %}

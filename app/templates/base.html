@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Eventoria{% endblock %}</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-container">
+
+        <!-- Слева ссылки -->
+        <div class="nav-links">
+            <a href="/ui/login">Login</a>
+            <a href="/ui/register">Register</a>
+            <a href="/ui/events">Events</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+
+        <!-- Справа логотип -->
+        <a href="/" class="logo">Eventoria</a>
+
+    </div>
+</nav>
+
+<main class="main-container">
+    {% block content %}{% endblock %}
+</main>
+
+<script>
+function logout() {
+    localStorage.removeItem("access_token");
+    window.location.href = "/ui/login";
+}
+</script>
+
+</body>
+</html>
