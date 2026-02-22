@@ -4,6 +4,7 @@ from pydantic import field_validator
 class Settings(BaseSettings):
     DATABASE_URL: str
     JWT_SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     @field_validator("DATABASE_URL")
     @classmethod
